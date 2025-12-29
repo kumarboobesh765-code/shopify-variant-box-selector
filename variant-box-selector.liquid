@@ -1,0 +1,89 @@
+{% comment %}
+  Variant Box Selector
+  - Best Selling highlight (metafield or deterministic fallback)
+  - Safe variant switching (updates input[name="id"])
+{% endcomment %}
+
+{% if product and product.variants and product.variants.size > 1 %}
+
+{{ 'variant-box-selector.css' | asset_url | stylesheet_tag }}
+{{ 'variant-box-selector.js' | asset_url | script_tag }}
+
+{%- assign any_best = false -%}
+{%- for v in product.variants -%}
+  {%- if forloop.index0 != 0 and v.metafields.custom.best_selling == 'true' -%}
+    {%- assign any_best = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- assign pick_index = 0 -%}
+{%- if any_best == false -%}
+  {%- assign raw_pick = product.id | modulo: product.variants.size -%}
+  {%- assign pick_index = raw_pick -%}
+  {%- if pick_index == 0 -%}{%- assign pick_index = 1 -%}{%- endif -%}
+{%- endif -%}
+
+<div class="vbox-wrap" id="vbox-root-{{ product.id }}">
+  <div class="vbox-grid">
+
+    {% for variant in product.variants %}
+      {% assign bestseller = '' %}
+      {% if forloop.index0 != 0 %}
+        {% if variant.metafields.custom.best_selling == 'true' or forloop.index0 == pick_index %}
+          {% assign bestseller = 'bestselling-box' %}
+        {% endif %}
+      {% endif %}
+
+      {% assign img = variant.image | default: product.featured_image %}
+
+      <label
+        class="vbox-card {{ bestseller }}"
+        data-variant-id="{{ variant.id }}"
+        data-available="{{ variant.available | json }}"
+      >
+        <input type="radio" name="vbox_{{ product.id }}" {% if forloop.first %}checked{% endif %}>
+
+        {% if bestseller != '' %}
+          <div class="vbox-ribbon">Best Selling</div>
+        {% endif %}
+
+        {% if img %}
+          <img class="vbox-img" src="{{ img | image_url: width: 300 }}" alt="{{ variant.title }}">
+        {% else %}
+          <div class="vbox-img vbox-fallback">🧴</div>
+        {% endif %}
+
+        <div class="vbox-title">{{ variant.title }}</div>
+
+        <div class="vbox-price">{{ variant.price | money }}</div>
+
+        {% if variant.compare_at_price > variant.price %}
+          <div class="vbox-compare">{{ variant.compare_at_price | money }}</div>
+          <div class="vbox-discount">
+            {{ variant.compare_at_price | minus: variant.price | times: 100 | divided_by: variant.compare_at_price }}% Off
+          </div>
+        {% endif %}
+
+        {% unless variant.available %}
+          <div class="vbox-sold">Sold Out</div>
+        {% endunless %}
+      </label>
+    {% endfor %}
+
+  </div>
+</div>
+
+{% endif %}
+
+{% schema %}
+{
+  "name": "Variant Box Selector",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Variant Box Selector"
+    }
+  ]
+}
+{% endschema %}
