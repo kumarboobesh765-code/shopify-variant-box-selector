@@ -1,0 +1,1 @@
+# shopify-variant-box-selector
